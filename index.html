@@ -1,45 +1,171 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>我的主页</title>
-    <style>*{
-        margin: 0;
-        padding: 0;
-    }
-    .box {
-        height: 15vh;
-        background: linear-gradient(to right,red,orange,yellow,green,cyan,blue,purple);
-        /* red 、 orange 、 yellow 、 green 、 cyan 、 blue 、 purple */
-    }
-    .left {
-        width: 15vw;
-        height: 85vh;
-        background: linear-gradient(to top,red,orange,yellow,green,cyan,blue,purple);
-        float: left;
-    }
-    .right {
-        width: 15vw;
-        height: 85vh;
-        background: linear-gradient(to bottom,red,orange,yellow,green,cyan,blue,purple);
-        float: right;
-    }
-    .bottom {
-        width: 70vw;
-        height: 15vh;
-        background: linear-gradient(to right,red,orange,yellow,green,cyan,blue,purple);
-        float: left;
-        position: absolute;
-        top: 85vh;
-    }
+    <title>Document</title>
+    <script src="./js/jquery-1.12.4.js"></script>
+    <style>
+        html,
+        body {
+            background: #000;
+            margin: 0;
+        }
+
+        canvas {
+            position: absolute;
+        }
     </style>
 </head>
+
 <body>
-    <div class="box"></div>
-    <div class="left"></div>
-    <div class="right"></div>
-    <div class="bottom"></div>
+    <canvas></canvas>
 </body>
+<script>
+    $(function () {
+        var canvas = document.querySelector('canvas'),//获取元素
+            ctx = canvas.getContext('2d');//getContext("2d") 对象是内建的 HTML5 对象，拥有多种绘制路径、矩形、圆形、字符以及添加图像的方法。
+        canvas.width = window.innerWidth;//画布的宽度
+        canvas.height = window.innerHeight;//画布的高度
+        ctx.lineWidth = .3;//lineWidth---属性设置或返回当前线条的宽度，以像素计
+        ctx.strokeStyle = (new Color(150)).style;//strokeStyle---设置或返回用于笔触的颜色、渐变或模式
+
+        var mousePosition = {//初始圆的位置(连线圆)
+            x: 30 * canvas.width / 100,
+            y: 30 * canvas.height / 100
+        };
+
+        var dots = {
+            nb: 250,//随机点点的数量
+            distance: 100,
+            d_radius: 150,
+            array: []
+        };
+        function colorValue(min) {//颜色随机数字
+            return Math.floor(Math.random() * 255 + min);
+        }
+
+        function createColorStyle(r, g, b) {//返回颜色
+            return 'rgba(' + r + ',' + g + ',' + b + ', 0.8)';
+        }
+
+        function mixComponents(comp1, weight1, comp2, weight2) {
+            return (comp1 * weight1 + comp2 * weight2) / (weight1 + weight2);
+        }
+
+        function averageColorStyles(dot1, dot2) {
+            var color1 = dot1.color,
+                color2 = dot2.color;
+
+            var r = mixComponents(color1.r, dot1.radius, color2.r, dot2.radius),
+                g = mixComponents(color1.g, dot1.radius, color2.g, dot2.radius),
+                b = mixComponents(color1.b, dot1.radius, color2.b, dot2.radius);
+            return createColorStyle(Math.floor(r), Math.floor(g), Math.floor(b));
+        }
+
+        function Color(min) {//随机颜色构造函数
+            min = min || 0;
+            this.r = colorValue(min);
+            this.g = colorValue(min);
+            this.b = colorValue(min);
+            this.style = createColorStyle(this.r, this.g, this.b);
+        }
+        function Dot() {//点点构造函数
+            this.x = Math.random() * canvas.width;//随机x轴
+            this.y = Math.random() * canvas.height;//随机y轴
+
+            this.vx = -.5 + Math.random();
+            this.vy = -.5 + Math.random();
+
+            this.radius = Math.random() * 10;//随机点点的大小
+
+            this.color = new Color();//随机点点的颜色
+            // console.log(this);
+        }
+
+        Dot.prototype = {//点点构造函数原型
+            draw: function () {
+                ctx.beginPath();//起始一条路径，或重置当前路径
+                ctx.fillStyle = this.color.style;//	设置或返回用于填充绘画的颜色、渐变或模式---线的颜色为点点的颜色
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);//arc() 方法创建弧/曲线（用于创建圆或部分圆)---结束角设置为 2*Math.PI---为圆
+                //arc(中心坐标x,中心坐标y,半径,圆弧起始位置,圆弧结束位置,false顺时针(true为逆时针))
+                ctx.fill();//fill() 方法填充当前的图像（路径）。默认颜色是黑色。
+            }
+        };
+
+        function createDots() {
+            for (i = 0; i < dots.nb; i++) {//循环产生点点数据,添加进数组
+                dots.array.push(new Dot());
+            }
+        }
+
+        function moveDots() {
+            for (i = 0; i < dots.nb; i++) {
+
+                var dot = dots.array[i];
+
+                if (dot.y < 0 || dot.y > canvas.height) {
+                    dot.vx = dot.vx;
+                    dot.vy = - dot.vy;
+                }
+                else if (dot.x < 0 || dot.x > canvas.width) {
+                    dot.vx = - dot.vx;
+                    dot.vy = dot.vy;
+                }
+                dot.x += dot.vx;//坐标 + 步长(随机出的)
+                dot.y += dot.vy;//同上
+            }
+        }
+        function connectDots() {//一个圆范围内的点连接起来
+            for (i = 0; i < dots.nb; i++) {
+                for (j = 0; j < dots.nb; j++) {
+                    i_dot = dots.array[i];
+                    j_dot = dots.array[j];
+
+                    if ((i_dot.x - j_dot.x) < dots.distance && (i_dot.y - j_dot.y) < dots.distance && (i_dot.x - j_dot.x) > - dots.distance && (i_dot.y - j_dot.y) > - dots.distance) {
+                        if ((i_dot.x - mousePosition.x) < dots.d_radius && (i_dot.y - mousePosition.y) < dots.d_radius && (i_dot.x - mousePosition.x) > - dots.d_radius && (i_dot.y - mousePosition.y) > - dots.d_radius) {
+                            ctx.beginPath();//起始一条路径，或重置当前路径
+                            ctx.strokeStyle = averageColorStyles(i_dot, j_dot);//笔触的颜色
+                            ctx.moveTo(i_dot.x, i_dot.y);//线的起始位置
+                            ctx.lineTo(j_dot.x, j_dot.y);//线的结束位置
+                            ctx.stroke();//stroke() 方法会实际地绘制出通过 moveTo() 和 lineTo() 方法定义的路径
+                            ctx.closePath();//closePath() 方法创建从当前点到开始点的路径。(类似于蛇咬头)
+                        }
+                    }
+                }
+            }
+        }
+
+        function drawDots() {
+            for (i = 0; i < dots.nb; i++) {
+                var dot = dots.array[i];
+                dot.draw();//调用原型的方法生成点
+            }
+        }
+
+        function animateDots() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);//clearRect() 方法清空给定矩形内的指定像素。
+            moveDots();//点点移动的方法
+            connectDots();//点点链接的方法
+            drawDots();//生成点点的方法
+
+            requestAnimationFrame(animateDots);//定时执行重绘的方法
+        }
+        $('canvas').on('mousemove', function (e) {//鼠标移入事件
+            mousePosition.x = e.pageX;
+            mousePosition.y = e.pageY;
+        });
+
+        $('canvas').on('mouseleave', function (e) {//鼠标移出回归中点
+            mousePosition.x = canvas.width / 2;
+            mousePosition.y = canvas.height / 2;
+        });
+
+        createDots();
+        requestAnimationFrame(animateDots);
+    })
+</script>
+
 </html>
